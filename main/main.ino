@@ -1,60 +1,101 @@
 
-#include "U8glib.h"
+#include "Arduino.h"
+#include "SoftwareSerial.h"
+#include "DFRobotDFPlayerMini.h"
 
-volatile int pwm_value = 0;
-volatile int prev_time = 0;
-U8GLIB_SSD1306_128X32 u8g(U8G_I2C_OPT_NONE);
+SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+void printDetail(uint8_t type, int value);
 
-void draw(int value) {
+void setup()
+{
+  mySoftwareSerial.begin(9600);
+  Serial.begin(115200);
   
-  u8g.setFont(u8g_font_unifont);
-  String  val = String(value);
-  u8g.setPrintPos(0, 22);
-  u8g.print("                      ");
-  u8g.setPrintPos(0, 22);
-  u8g.print(val);
-}
-
-void rising() {
+  Serial.println();
+  Serial.println(F("DFRobot DFPlayer Mini Demo"));
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
   
-  attachInterrupt(0, falling, FALLING);
-  prev_time = micros();
-}
- 
-void falling() {
+  if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0); // Code to compatible with ESP8266 watch dog.
+    }
+  }
+  Serial.println(F("DFPlayer Mini online."));
   
-  pwm_value = micros() - prev_time;
-  Serial.println(pwm_value);
-  u8g.firstPage();  
-  do {
-    draw(pwm_value);
-  } while( u8g.nextPage() );
-  delay(1000);
-  draw(pwm_value);
-  attachInterrupt(0, rising, RISING);
+  myDFPlayer.volume(10);  //Set volume value. From 0 to 30
+  myDFPlayer.play(1);  //Play the first mp3
 }
 
-void setup(void) {
+void loop()
+{
+  static unsigned long timer = millis();
   
-  //  setup display
-  u8g.setRot180();
-  if ( u8g.getMode() == U8G_MODE_R3G3B2 )
-    u8g.setColorIndex(255);     // white
-  else if ( u8g.getMode() == U8G_MODE_GRAY2BIT )
-    u8g.setColorIndex(3);         // max intensity
-  else if ( u8g.getMode() == U8G_MODE_BW )
-    u8g.setColorIndex(1);         // pixel on
-
-    //  setup monitor serial port for pulses length in serial monitor
-    Serial.begin(115200);
-
-    //  set external interrupt on Digital PIN 2
-    attachInterrupt(0, rising, RISING);
+  if (millis() - timer > 3000) {
+    timer = millis();
+    myDFPlayer.next();  //Play next mp3 every 3 second.
+  }
+  
+  if (myDFPlayer.available()) {
+    printDetail(myDFPlayer.readType(), myDFPlayer.read()); //Print the detail message from DFPlayer to handle different errors and states.
+  }
 }
 
-void loop(void) {
+void printDetail(uint8_t type, int value){
+  switch (type) {
+    case TimeOut:
+      Serial.println(F("Time Out!"));
+      break;
+    case WrongStack:
+      Serial.println(F("Stack Wrong!"));
+      break;
+    case DFPlayerCardInserted:
+      Serial.println(F("Card Inserted!"));
+      break;
+    case DFPlayerCardRemoved:
+      Serial.println(F("Card Removed!"));
+      break;
+    case DFPlayerCardOnline:
+      Serial.println(F("Card Online!"));
+      break;
+    case DFPlayerPlayFinished:
+      Serial.print(F("Number:"));
+      Serial.print(value);
+      Serial.println(F(" Play Finished!"));
+      break;
+    case DFPlayerError:
+      Serial.print(F("DFPlayerError:"));
+      switch (value) {
+        case Busy:
+          Serial.println(F("Card not found"));
+          break;
+        case Sleeping:
+          Serial.println(F("Sleeping"));
+          break;
+        case SerialWrongStack:
+          Serial.println(F("Get Wrong Stack"));
+          break;
+        case CheckSumNotMatch:
+          Serial.println(F("Check Sum Not Match"));
+          break;
+        case FileIndexOut:
+          Serial.println(F("File Index Out of Bound"));
+          break;
+        case FileMismatch:
+          Serial.println(F("Cannot Find File"));
+          break;
+        case Advertise:
+          Serial.println(F("In Advertise"));
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+
 }
-
-
-
-

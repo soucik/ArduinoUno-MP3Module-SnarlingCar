@@ -7,12 +7,11 @@ volatile int pwm_value = 0;
 volatile int oldPwm_value = 0;
 volatile int prev_time = 0;
 const byte interruptPin = 2;
-int mp3Number = 1;
+int mp3Number = 1; //start
 int oldMp3Number = 0;
-boolean forceChange = false;
+bool forceChange = false;
 unsigned long microSecondsLastChange = 0;
 unsigned long playedCount = 0;
-
 
 SoftwareSerial mySoftwareSerial(10, 11); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
@@ -38,8 +37,8 @@ void setup()
     }
   }
   Serial.println(F("DFPlayer Mini online."));
-  
-  myDFPlayer.volume(4);  //Set volume value. From 0 to 30
+  startUp();
+  myDFPlayer.volume(30);  //Set volume value. From 0 to 30
   
 }
 
@@ -53,55 +52,65 @@ void startUp(){
 }
 
 void changeUp(){
-  if(pwm_value<2400){
+  if(pwm_value<1500){
+    
+
     mp3Number = 2;
-    }
-  if(pwm_value<2200){
+    
+    if(pwm_value<1450){
     mp3Number = 3;
    }
-  if(pwm_value<2000){
+    if(pwm_value<1300){
     mp3Number = 4;
    }
-  if(pwm_value<1800){
+    if(pwm_value<1200){
     mp3Number = 5;
    }
-  if(pwm_value<1600){
+    if(pwm_value<1100){
     mp3Number = 6;
   }
-  if(pwm_value<1400){
+    if(pwm_value<1000){
     mp3Number = 7;
   }
-  if(pwm_value<1200){
+    if(pwm_value<900){
     mp3Number = 8;
   }
-
-Serial.println(pwm_value);
-playIfChange();
-microSecondsLastChange = 0;
-}
-
-void changeDown(){
-    if(pwm_value>1200){
-    mp3Number = 9;
-  }
+    
+ }
+  else{
+ 
+    mp3Number = 2;
+    
     if(pwm_value>1600){
-    mp3Number = 10;
-  }
-    if(pwm_value>1900){
-    mp3Number = 11;
-  }
-  if(pwm_value>2200){
-    mp3Number = 12;
+    mp3Number = 3;
    }
-
+    if(pwm_value>1670){
+    mp3Number = 4;
+   }
+    if(pwm_value>1740){
+    mp3Number = 5;
+   }
+    if(pwm_value>1810){
+    mp3Number = 6;
+  }
+    if(pwm_value>1880){
+    mp3Number = 7;
+  }
+    if(pwm_value>1940){
+    mp3Number = 8;
+  }
+      
+  }
+  
+  
 
 Serial.println(pwm_value);
 playIfChange();
 microSecondsLastChange = 0;
 }
-
 
 void playIfChange(){
+
   if((oldMp3Number != mp3Number) || forceChange == true ){
    forceChange == false;
    oldMp3Number = mp3Number;
@@ -112,17 +121,19 @@ void playIfChange(){
    Serial.print(F("Play Count: "));
    Serial.println(playedCount);
    }
+
  }
 
  void playSame(){
+
    myDFPlayer.play(mp3Number);
    playedCount = playedCount + 1;
-   Serial.print(F("Actual Play: "));
+   Serial.print(F("Actual Play Same: "));
    Serial.println(mp3Number);
    Serial.print(F("Play Count: "));
    Serial.println(playedCount);
- }
-          
+
+}
  
 void falling(){
   attachInterrupt(digitalPinToInterrupt(interruptPin), rising, RISING);
@@ -130,10 +141,10 @@ void falling(){
   microSecondsLastChange = microSecondsLastChange+1;
   if (microSecondsLastChange>100){
     Serial.println(F("Tick MacroScopic "));
-           Serial.println(microSecondsLastChange);
+    Serial.println(microSecondsLastChange);
     forceChange = false;
-    if(pwm_value < oldPwm_value-120 || pwm_value > oldPwm_value+120){
-      Serial.println(F("Koekcia "));
+    if(pwm_value < oldPwm_value-10 || pwm_value > oldPwm_value+10){
+      Serial.println(F("Korekcia "));
       oldPwm_value  = pwm_value;
       }
       
@@ -173,9 +184,12 @@ void printDetail(uint8_t type, int value){
       Serial.print(value);
       Serial.println(F(" Play Finished!"));
       forceChange = true;
+
       if(value == 2 || value == 4 || value == 6 || value == 8){
-        mp3Number = value;
-        playSame();
+
+          mp3Number = value;
+          playSame();
+         
       }
       else{
           mp3Number = value+1;   
